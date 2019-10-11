@@ -1,0 +1,13 @@
+# Target labels
+ mconf-idf
+# Source files and their labels
+/home/wmk/esp/http_server/simple/build/bootloader/CMakeFiles/mconf-idf
+/home/wmk/esp/http_server/simple/build/bootloader/CMakeFiles/mconf-idf.rule
+/home/wmk/esp/http_server/simple/build/bootloader/CMakeFiles/mconf-idf-complete.rule
+/home/wmk/esp/http_server/simple/build/bootloader/mconf-idf-prefix/src/mconf-idf-stamp/mconf-idf-install.rule
+/home/wmk/esp/http_server/simple/build/bootloader/mconf-idf-prefix/src/mconf-idf-stamp/mconf-idf-mkdir.rule
+/home/wmk/esp/http_server/simple/build/bootloader/mconf-idf-prefix/src/mconf-idf-stamp/mconf-idf-download.rule
+/home/wmk/esp/http_server/simple/build/bootloader/mconf-idf-prefix/src/mconf-idf-stamp/mconf-idf-update.rule
+/home/wmk/esp/http_server/simple/build/bootloader/mconf-idf-prefix/src/mconf-idf-stamp/mconf-idf-patch.rule
+/home/wmk/esp/http_server/simple/build/bootloader/mconf-idf-prefix/src/mconf-idf-stamp/mconf-idf-configure.rule
+/home/wmk/esp/http_server/simple/build/bootloader/mconf-idf-prefix/src/mconf-idf-stamp/mconf-idf-build.rule

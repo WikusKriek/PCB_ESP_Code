@@ -1,0 +1,18 @@
+{
+    "project_name":       "bootloader",
+    "project_path":       "/home/wmk/esp/esp-idf/components/bootloader/subproject",
+    "build_dir":          "/home/wmk/esp/http_server/simple/build/bootloader",
+    "config_file":        "/home/wmk/esp/http_server/simple/sdkconfig",
+    "config_defaults":    "",
+    "app_elf":            "bootloader.elf",
+    "app_bin":            "bootloader.bin",
+    "git_revision":       "v4.1-dev-369-g4dac7c7df",
+    "phy_data_partition": "",
+    "monitor_baud" : "115200",
+    "config_environment" : {
+        "COMPONENT_KCONFIGS" : "/home/wmk/esp/esp-idf/components/efuse/Kconfig;/home/wmk/esp/esp-idf/components/esp32/Kconfig;/home/wmk/esp/esp-idf/components/esp_common/Kconfig;/home/wmk/esp/esp-idf/components/log/Kconfig;/home/wmk/esp/esp-idf/components/spi_flash/Kconfig",
+        "COMPONENT_KCONFIGS_PROJBUILD" : "/home/wmk/esp/esp-idf/components/bootloader/Kconfig.projbuild;/home/wmk/esp/esp-idf/components/esptool_py/Kconfig.projbuild;/home/wmk/esp/esp-idf/components/partition_table/Kconfig.projbuild"
+    },
+    "build_components" : [ "bootloader", "bootloader_support", "efuse", "esp32", "esp_common", "esp_rom", "esptool_py", "log", "main", "micro-ecc", "partition_table", "soc", "spi_flash", "xtensa", "" ],
+    "build_component_paths" : [ "/home/wmk/esp/esp-idf/components/bootloader", "/home/wmk/esp/esp-idf/components/bootloader_support", "/home/wmk/esp/esp-idf/components/efuse", "/home/wmk/esp/esp-idf/components/esp32", "/home/wmk/esp/esp-idf/components/esp_common", "/home/wmk/esp/esp-idf/components/esp_rom", "/home/wmk/esp/esp-idf/components/esptool_py", "/home/wmk/esp/esp-idf/components/log", "/home/wmk/esp/esp-idf/components/bootloader/subproject/main", "/home/wmk/esp/esp-idf/components/bootloader/subproject/components/micro-ecc", "/home/wmk/esp/esp-idf/components/partition_table", "/home/wmk/esp/esp-idf/components/soc", "/home/wmk/esp/esp-idf/components/spi_flash", "/home/wmk/esp/esp-idf/components/xtensa", "" ]
+}
