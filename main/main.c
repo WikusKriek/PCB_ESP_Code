@@ -32,11 +32,14 @@
 #include "esp_log.h"
 #include "esp_vfs.h"
 #include "cJSON.h"
+#include<stdlib.h>
 /* A simple example that demonstrates how to create GET and POST
  * handlers for the web server.
  */
 #define BLINK_GPIO 23
+#define GPIO_INPUT_IO_22     22
 static const char *TAG = "example";
+int A=0;
 
 /* An HTTP GET handler */
 static esp_err_t hello_get_handler(httpd_req_t *req)
@@ -50,6 +53,7 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
     gpio_set_level(BLINK_GPIO, 1);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     gpio_set_level(BLINK_GPIO, 0);
+    A=gpio_get_level(22);
     if (buf_len > 1) {
         buf = malloc(buf_len);
         /* Copy null terminated value string into buffer */
@@ -98,14 +102,15 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
         }
         free(buf);
     }
-
+    char str[2]={0};
+    itoa(gpio_get_level(22),str,10);
+  const char* valuestr = (const char*) str;
     /* Set some custom headers */
-    httpd_resp_set_hdr(req, "Custom-Header-1", "Custom-Value-1");
-    httpd_resp_set_hdr(req, "Custom-Header-2", "Custom-Value-2");
-
+    httpd_resp_set_hdr(req, "Custom-Header-1", str );
+    httpd_resp_set_hdr(req, "Custom-Header-2", "458");
     /* Send response with custom headers and body set as the
      * string passed in user context*/
-    const char* resp_str = (const char*) req->user_ctx;
+    const char* resp_str = (const char*) "222";
     httpd_resp_send(req, resp_str, strlen(resp_str));
 
     /* After sending the HTTP response the old HTTP request
@@ -122,7 +127,7 @@ static const httpd_uri_t hello = {
     .handler   = hello_get_handler,
     /* Let's pass response string in user
      * context to demonstrate it's usage */
-    .user_ctx  = "Hello World!"
+    .user_ctx  = "hello"
 };
 
 /* An HTTP POST handler */
@@ -337,8 +342,11 @@ void app_main(void)
     tcpip_adapter_init();
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     gpio_pad_select_gpio(BLINK_GPIO);
+    gpio_pad_select_gpio(GPIO_INPUT_IO_22);
+
     /* Set the GPIO as a push/pull output */
     gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_direction(GPIO_INPUT_IO_22 , GPIO_MODE_INPUT);
 
     /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
      * Read "Establishing Wi-Fi or Ethernet Connection" section in
