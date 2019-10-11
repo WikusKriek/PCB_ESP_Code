@@ -33,12 +33,19 @@
 #include "esp_vfs.h"
 #include "cJSON.h"
 #include<stdlib.h>
+#include "driver/uart.h"
 /* A simple example that demonstrates how to create GET and POST
  * handlers for the web server.
  */
 #define BLINK_GPIO 23
 #define GPIO_INPUT_IO_22     22
+#define GPIO_INPUT_IO_19     19
+#define GPIO_INPUT_IO_18     18
+#define TXD_PIN (GPIO_NUM_4)
+#define RXD_PIN (GPIO_NUM_5)
 static const char *TAG = "example";
+static const int RX_BUF_SIZE = 1024;
+
 int A=0;
 
 /* An HTTP GET handler */
@@ -53,7 +60,6 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
     gpio_set_level(BLINK_GPIO, 1);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     gpio_set_level(BLINK_GPIO, 0);
-    A=gpio_get_level(22);
     if (buf_len > 1) {
         buf = malloc(buf_len);
         /* Copy null terminated value string into buffer */
@@ -102,12 +108,46 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
         }
         free(buf);
     }
+    /* UART1 if pin G4 and G5 are shorted the message will be an echo */
+     char* data="101";
+     int len = strlen(data);
+    uart_write_bytes(UART_NUM_1, data, len);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+     uint8_t* data1 = (uint8_t*) malloc(RX_BUF_SIZE+1);
+    const int rxBytes = uart_read_bytes(UART_NUM_1, data1, RX_BUF_SIZE, 1000 / portTICK_RATE_MS);
+    /* UART1 if pin G4 and G5 are shorted the message will be an echo */
+    /* Delay waiting for response from blue pill*/
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    if (rxBytes > 0) {
+            data1[rxBytes] = 0;
+            ESP_LOGI(TAG, "Read %d bytes: '%s'", rxBytes, data1);
+            ESP_LOG_BUFFER_HEXDUMP(TAG, data1, rxBytes, ESP_LOG_INFO);
+            /* the below should be replaced with the recieved message from blue pill */
+
+            httpd_resp_set_hdr(req, "Custom-Header-1", "1");
+            httpd_resp_set_hdr(req, "Custom-Header-2", "1" );
+            httpd_resp_set_hdr(req, "Custom-Header-3", "1" );
+
+          }else{
+            httpd_resp_set_hdr(req, "Custom-Header-1", "0" );
+            httpd_resp_set_hdr(req, "Custom-Header-2", "0" );
+            httpd_resp_set_hdr(req, "Custom-Header-3", "0" );
+          }
+            /* if by this time there has been no response from blue pill asume something went wrong */
+    /* After uart transmission send uart response to website */
+    /*read pins value
     char str[2]={0};
+    char str1[2]={0};
+    char str2[2]={0};
     itoa(gpio_get_level(22),str,10);
-  const char* valuestr = (const char*) str;
+    itoa(gpio_get_level(19),str1,10);
+    itoa(gpio_get_level(18),str2,10);*/
     /* Set some custom headers */
+    /* return pin values as headers
     httpd_resp_set_hdr(req, "Custom-Header-1", str );
-    httpd_resp_set_hdr(req, "Custom-Header-2", "458");
+    httpd_resp_set_hdr(req, "Custom-Header-2", str1 );
+    httpd_resp_set_hdr(req, "Custom-Header-3", str2 );
+    */
     /* Send response with custom headers and body set as the
      * string passed in user context*/
     const char* resp_str = (const char*) "222";
@@ -194,13 +234,35 @@ static esp_err_t light_brightness_post_handler(httpd_req_t *req)
 
 
     cJSON *root = cJSON_Parse(buf);
-    int red = cJSON_GetObjectItem(root, "red")->valueint;
-    int green = cJSON_GetObjectItem(root, "green")->valueint;
-    int blue = cJSON_GetObjectItem(root, "blue")->valueint;
-    ESP_LOGI(TAG, "Light control: red = %d, green = %d, blue = %d", red, green, blue);
+    int pan = cJSON_GetObjectItem(root, "pan")->valueint;
+    int tilt = cJSON_GetObjectItem(root, "tilt")->valueint;
+    int energy = cJSON_GetObjectItem(root, "energy")->valueint;
+    ESP_LOGI(TAG, "Light control: pan = %d, tilt = %d, energy = %d", pan, tilt, energy);
 
     cJSON_Delete(root);
     httpd_resp_sendstr(req, "Post control value successfully");
+
+    /* UART1 send data pan and tilt and recieve data */
+    char str3[5]={0};
+    char str4[5]={0};
+    itoa(pan,str3,10);
+    itoa(tilt,str4,10);
+    char str[80];
+    strcpy(str, str3);
+    strcat(str, ",");
+    strcat(str, str4);
+     char* data=str;
+     int len = strlen(data);
+    uart_write_bytes(UART_NUM_1, data, len);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+     uint8_t* data1 = (uint8_t*) malloc(RX_BUF_SIZE+1);
+    const int rxBytes = uart_read_bytes(UART_NUM_1, data1, RX_BUF_SIZE, 1000 / portTICK_RATE_MS);
+    /* UART1 if pin G4 and G5 are shorted the message will be an echo */
+    if (rxBytes > 0) {
+            data1[rxBytes] = 0;
+            ESP_LOGI(TAG, "Read %d bytes: '%s'", rxBytes, data1);
+            ESP_LOG_BUFFER_HEXDUMP(TAG, data1, rxBytes, ESP_LOG_INFO);
+        }
     return ESP_OK;
 
 }
@@ -343,10 +405,14 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     gpio_pad_select_gpio(BLINK_GPIO);
     gpio_pad_select_gpio(GPIO_INPUT_IO_22);
+    gpio_pad_select_gpio(GPIO_INPUT_IO_19);
+    gpio_pad_select_gpio(GPIO_INPUT_IO_18);
 
     /* Set the GPIO as a push/pull output */
     gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
     gpio_set_direction(GPIO_INPUT_IO_22 , GPIO_MODE_INPUT);
+    gpio_set_direction(GPIO_INPUT_IO_19 , GPIO_MODE_INPUT);
+    gpio_set_direction(GPIO_INPUT_IO_18 , GPIO_MODE_INPUT);
 
     /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
      * Read "Establishing Wi-Fi or Ethernet Connection" section in
@@ -357,6 +423,18 @@ void app_main(void)
     /* Register event handlers to stop the server when Wi-Fi or Ethernet is disconnected,
      * and re-start it upon connection.
      */
+     const uart_config_t uart_config = {
+             .baud_rate = 115200,
+             .data_bits = UART_DATA_8_BITS,
+             .parity = UART_PARITY_DISABLE,
+             .stop_bits = UART_STOP_BITS_1,
+             .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
+         };
+         uart_param_config(UART_NUM_1, &uart_config);
+         uart_set_pin(UART_NUM_1, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+         // We won't use a buffer for sending data.
+         uart_driver_install(UART_NUM_1, RX_BUF_SIZE * 2, 0, 0, NULL, 0);
+
 #ifdef CONFIG_EXAMPLE_CONNECT_WIFI
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
