@@ -109,7 +109,7 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
         free(buf);
     }
     /* UART1 if pin G4 and G5 are shorted the message will be an echo */
-     char* data="101";
+     char* data="10";
      int len = strlen(data);
     uart_write_bytes(UART_NUM_1, data, len);
     vTaskDelay(2000 / portTICK_PERIOD_MS);
@@ -123,8 +123,8 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
             ESP_LOGI(TAG, "Read %d bytes: '%s'", rxBytes, data1);
             ESP_LOG_BUFFER_HEXDUMP(TAG, data1, rxBytes, ESP_LOG_INFO);
             /* the below should be replaced with the recieved message from blue pill */
-
-            httpd_resp_set_hdr(req, "Custom-Header-1", "1");
+            char* num = (char*) data1;
+            httpd_resp_set_hdr(req, "Custom-Header-1", num);
             httpd_resp_set_hdr(req, "Custom-Header-2", "1" );
             httpd_resp_set_hdr(req, "Custom-Header-3", "1" );
 
@@ -150,7 +150,7 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
     */
     /* Send response with custom headers and body set as the
      * string passed in user context*/
-    const char* resp_str = (const char*) "222";
+    const char* resp_str = (char*) data1;
     httpd_resp_send(req, resp_str, strlen(resp_str));
 
     /* After sending the HTTP response the old HTTP request
@@ -198,6 +198,7 @@ static esp_err_t echo_post_handler(httpd_req_t *req)
     }
 
     // End response
+
     httpd_resp_send_chunk(req, NULL, 0);
     return ESP_OK;
 }
@@ -240,6 +241,7 @@ static esp_err_t light_brightness_post_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Light control: pan = %d, tilt = %d, energy = %d", pan, tilt, energy);
 
     cJSON_Delete(root);
+    
     httpd_resp_sendstr(req, "Post control value successfully");
 
     /* UART1 send data pan and tilt and recieve data */
