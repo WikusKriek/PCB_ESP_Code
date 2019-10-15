@@ -61,8 +61,7 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
      * extra byte for null termination */
     buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
     gpio_set_level(BLINK_GPIO, 1);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    gpio_set_level(BLINK_GPIO, 0);
+
     if (buf_len > 1) {
         buf = malloc(buf_len);
         /* Copy null terminated value string into buffer */
@@ -113,33 +112,25 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
     }
     /* UART1 if pin G4 and G5 are shorted the message will be an echo */
      char* data="10";
+     char* data2="11";
      int len = strlen(data);
+     int len1 = strlen(data2);
     uart_write_bytes(UART_NUM_1, data, len);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    uart_write_bytes(UART_NUM_2, data2, len1);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
      uint8_t* data1 = (uint8_t*) malloc(RX_BUF_SIZE+1);
+     uint8_t* data3 = (uint8_t*) malloc(RX_BUF_SIZE2+1);
     const int rxBytes = uart_read_bytes(UART_NUM_1, data1, RX_BUF_SIZE, 1000 / portTICK_RATE_MS);
+    const int rxBytes1 = uart_read_bytes(UART_NUM_2, data3, RX_BUF_SIZE2, 1000 / portTICK_RATE_MS);
     /* UART1 if pin G4 and G5 are shorted the message will be an echo */
     /* Delay waiting for response from blue pill*/
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
     /* UART2 if pin G16 and G17 are shorted the message will be an echo */
-     char* data2="11";
-     int len1 = strlen(data2);
-    uart_write_bytes(UART_NUM_2, data2, len1);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-     uint8_t* data3 = (uint8_t*) malloc(RX_BUF_SIZE2+1);
-    const int rxBytes1 = uart_read_bytes(UART_NUM_2, data3, RX_BUF_SIZE2, 1000 / portTICK_RATE_MS);
-    /* UART2 if pin G16 and G17 are shorted the message will be an echo */
-    /* Delay waiting for response from blue pill*/
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
 
     if (rxBytes > 0) {
             data1[rxBytes] = 0;
             ESP_LOGI(TAG, "Read %d bytes: '%s'", rxBytes, data1);
             ESP_LOG_BUFFER_HEXDUMP(TAG, data1, rxBytes, ESP_LOG_INFO);
-            /* the below should be replaced with the recieved message from blue pill */
-            char* num = (char*) data1;
-
 
           }
           if (rxBytes1 > 0) {
@@ -178,6 +169,7 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
     if (httpd_req_get_hdr_value_len(req, "Host") == 0) {
         ESP_LOGI(TAG, "Request headers lost");
     }
+    gpio_set_level(BLINK_GPIO, 0);
     return ESP_OK;
 }
 
