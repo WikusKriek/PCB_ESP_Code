@@ -43,8 +43,11 @@
 #define GPIO_INPUT_IO_18     18
 #define TXD_PIN (GPIO_NUM_4)
 #define RXD_PIN (GPIO_NUM_5)
+#define TXD_PIN2 (GPIO_NUM_16)
+#define RXD_PIN2 (GPIO_NUM_17)
 static const char *TAG = "example";
 static const int RX_BUF_SIZE = 1024;
+static const int RX_BUF_SIZE2 = 1024;
 
 int A=0;
 
@@ -118,21 +121,33 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
     /* UART1 if pin G4 and G5 are shorted the message will be an echo */
     /* Delay waiting for response from blue pill*/
     vTaskDelay(1000 / portTICK_PERIOD_MS);
+    /* UART2 if pin G16 and G17 are shorted the message will be an echo */
+     char* data2="11";
+     int len1 = strlen(data2);
+    uart_write_bytes(UART_NUM_2, data2, len1);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+     uint8_t* data3 = (uint8_t*) malloc(RX_BUF_SIZE2+1);
+    const int rxBytes1 = uart_read_bytes(UART_NUM_2, data3, RX_BUF_SIZE2, 1000 / portTICK_RATE_MS);
+    /* UART2 if pin G16 and G17 are shorted the message will be an echo */
+    /* Delay waiting for response from blue pill*/
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+
     if (rxBytes > 0) {
             data1[rxBytes] = 0;
             ESP_LOGI(TAG, "Read %d bytes: '%s'", rxBytes, data1);
             ESP_LOG_BUFFER_HEXDUMP(TAG, data1, rxBytes, ESP_LOG_INFO);
             /* the below should be replaced with the recieved message from blue pill */
             char* num = (char*) data1;
-            httpd_resp_set_hdr(req, "Custom-Header-1", num);
-            httpd_resp_set_hdr(req, "Custom-Header-2", "1" );
-            httpd_resp_set_hdr(req, "Custom-Header-3", "1" );
 
-          }else{
-            httpd_resp_set_hdr(req, "Custom-Header-1", "0" );
-            httpd_resp_set_hdr(req, "Custom-Header-2", "0" );
-            httpd_resp_set_hdr(req, "Custom-Header-3", "0" );
+
           }
+          if (rxBytes1 > 0) {
+                  data3[rxBytes1] = 0;
+                  ESP_LOGI(TAG, "Read %d bytes: '%s'", rxBytes1, data3);
+                  ESP_LOG_BUFFER_HEXDUMP(TAG, data3, rxBytes1, ESP_LOG_INFO);
+
+                }
             /* if by this time there has been no response from blue pill asume something went wrong */
     /* After uart transmission send uart response to website */
     /*read pins value
@@ -150,8 +165,13 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
     */
     /* Send response with custom headers and body set as the
      * string passed in user context*/
-    const char* resp_str = (char*) data1;
-    httpd_resp_send(req, resp_str, strlen(resp_str));
+     char* str1=(char*) data1;
+      char* str2=(char*) data3;
+     char * str3 = (char *) malloc(1 + strlen(str1)+ strlen(str2) );
+     strcpy(str3, str1);
+    strcat(str3, str2);
+    const char* resp_str1 = (char*) str3;
+    httpd_resp_send(req, resp_str1, strlen(resp_str1));
 
     /* After sending the HTTP response the old HTTP request
      * headers are lost. Check if HTTP request headers can be read now. */
@@ -241,7 +261,7 @@ static esp_err_t light_brightness_post_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "Light control: pan = %d, tilt = %d, energy = %d", pan, tilt, energy);
 
     cJSON_Delete(root);
-    
+
     httpd_resp_sendstr(req, "Post control value successfully");
 
     /* UART1 send data pan and tilt and recieve data */
@@ -424,6 +444,7 @@ void app_main(void)
 
     /* Register event handlers to stop the server when Wi-Fi or Ethernet is disconnected,
      * and re-start it upon connection.
+     *uart1 setup
      */
      const uart_config_t uart_config = {
              .baud_rate = 115200,
@@ -436,6 +457,13 @@ void app_main(void)
          uart_set_pin(UART_NUM_1, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
          // We won't use a buffer for sending data.
          uart_driver_install(UART_NUM_1, RX_BUF_SIZE * 2, 0, 0, NULL, 0);
+         /* UART2 setup
+          */
+
+         uart_param_config(UART_NUM_2, &uart_config);
+         uart_set_pin(UART_NUM_2, TXD_PIN2, RXD_PIN2, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+         // We won't use a buffer for sending data.
+         uart_driver_install(UART_NUM_2, RX_BUF_SIZE2 * 2, 0, 0, NULL, 0);
 
 #ifdef CONFIG_EXAMPLE_CONNECT_WIFI
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));
