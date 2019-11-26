@@ -111,15 +111,16 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
         free(buf);
     }
     /* UART1 if pin G4 and G5 are shorted the message will be an echo */
-     char* data="10";
-     char* data2="11";
+     char* data="status00";
      int len = strlen(data);
-     int len1 = strlen(data2);
+
     uart_write_bytes(UART_NUM_1, data, len);
-    uart_write_bytes(UART_NUM_2, data2, len1);
+    uart_write_bytes(UART_NUM_2, data, len);
+
+
     vTaskDelay(1000 / portTICK_PERIOD_MS);
      uint8_t* data1 = (uint8_t*) malloc(RX_BUF_SIZE+1);
-     uint8_t* data3 = (uint8_t*) malloc(RX_BUF_SIZE2+1);
+     uint8_t* data3 = (uint8_t*) malloc(RX_BUF_SIZE+1);
     const int rxBytes = uart_read_bytes(UART_NUM_1, data1, RX_BUF_SIZE, 1000 / portTICK_RATE_MS);
     const int rxBytes1 = uart_read_bytes(UART_NUM_2, data3, RX_BUF_SIZE2, 1000 / portTICK_RATE_MS);
     /* UART1 if pin G4 and G5 are shorted the message will be an echo */
@@ -208,6 +209,57 @@ static esp_err_t echo_post_handler(httpd_req_t *req)
         ESP_LOGI(TAG, "%.*s", ret, buf);
         ESP_LOGI(TAG, "====================================");
     }
+    char* data="fire0000";
+    int len = strlen(data);
+
+
+    uart_write_bytes(UART_NUM_2, data, len);
+
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    /* UART1 if pin G4 and G5 are shorted the message will be an echo */
+    /* Delay waiting for response from blue pill*/
+    /* UART2 if pin G16 and G17 are shorted the message will be an echo */
+    int l=0;
+     while(l<60){
+       uint8_t* data3 = (uint8_t*) malloc(RX_BUF_SIZE+1);
+
+       const int rxBytes1 = uart_read_bytes(UART_NUM_2, data3, RX_BUF_SIZE2, 1000 / portTICK_RATE_MS);
+         if (rxBytes1 > 0) {
+                 data3[rxBytes1] = 0;
+                 ESP_LOGI(TAG, "Read %d bytes: '%s'", rxBytes1, data3);
+                 ESP_LOG_BUFFER_HEXDUMP(TAG, data3, rxBytes1, ESP_LOG_INFO);
+                 const char* resp_str1 = (char*) data3;
+                 httpd_resp_send(req, resp_str1, strlen(resp_str1));
+                 l=61;
+               }else if(l==59){
+
+                 const char* resp_str2 = (char*) "0";
+                 httpd_resp_send(req, resp_str2, strlen(resp_str2));
+               }
+               l++;
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
+             }
+           /* if by this time there has been no response from blue pill asume something went wrong */
+    /* After uart transmission send uart response to website */
+    /*read pins value
+    char str[2]={0};
+    char str1[2]={0};
+    char str2[2]={0};
+    itoa(gpio_get_level(22),str,10);
+    itoa(gpio_get_level(19),str1,10);
+    itoa(gpio_get_level(18),str2,10);*/
+    /* Set some custom headers */
+    /* return pin values as headers
+    httpd_resp_set_hdr(req, "Custom-Header-1", str );
+    httpd_resp_set_hdr(req, "Custom-Header-2", str1 );
+    httpd_resp_set_hdr(req, "Custom-Header-3", str2 );
+    */
+    /* Send response with custom headers and body set as the
+    * string passed in user context*/
+
+
 
     // End response
 
@@ -217,9 +269,9 @@ static esp_err_t echo_post_handler(httpd_req_t *req)
 
 static const httpd_uri_t echo = {
     .uri       = "/echo",
-    .method    = HTTP_POST,
+    .method    = HTTP_GET,
     .handler   = echo_post_handler,
-    .user_ctx  = NULL
+    .user_ctx  = "echo"
 };
 static esp_err_t light_brightness_post_handler(httpd_req_t *req)
 {
@@ -254,29 +306,72 @@ static esp_err_t light_brightness_post_handler(httpd_req_t *req)
 
     cJSON_Delete(root);
 
-    httpd_resp_sendstr(req, "Post control value successfully");
-
     /* UART1 send data pan and tilt and recieve data */
+    char rotation[2]={0};
+
+
+    if(pan>=0){
+      rotation[0]='f';
+    }else{
+      rotation[0]='b';
+    }
     char str3[5]={0};
     char str4[5]={0};
-    itoa(pan,str3,10);
+    char str5[5]={0};
+    itoa(abs(pan),str3,10);
     itoa(tilt,str4,10);
+    itoa(energy,str5,10);
     char str[80];
-    strcpy(str, str3);
+    char str6[80];
+    strcpy(str6, "v");
+    if(energy<=9){
+    strcat(str6, "00");
+}else if(energy<=99){
+  strcat(str6, "0");
+}
+    strcat(str6, str5);
+    strcat(str6, "0000");
+    strcpy(str, "v");
+    strcat(str, rotation);
+    if(abs(pan)<=9){
+      strcat(str, "00");
+    }else if(abs(pan)<=99){
+      strcat(str, "0");
+    }
+    strcat(str, str3);
     strcat(str, ",");
+    if(tilt<=9){
+    strcat(str, "0");
+}
     strcat(str, str4);
      char* data=str;
+     char* data2=str6;
      int len = strlen(data);
+     int len1 = strlen(data2);
     uart_write_bytes(UART_NUM_1, data, len);
+    uart_write_bytes(UART_NUM_2, data2, len1);
+    ESP_LOGI(TAG,"uart1 %s uart2 %s", data, data2);
     vTaskDelay(2000 / portTICK_PERIOD_MS);
-     uint8_t* data1 = (uint8_t*) malloc(RX_BUF_SIZE+1);
-    const int rxBytes = uart_read_bytes(UART_NUM_1, data1, RX_BUF_SIZE, 1000 / portTICK_RATE_MS);
+    int l=0;
+     while(l<60){
+      uint8_t* data1 = (uint8_t*) malloc(RX_BUF_SIZE+1);
+     int rxBytes = uart_read_bytes(UART_NUM_1, data1, RX_BUF_SIZE, 1000 / portTICK_RATE_MS);
     /* UART1 if pin G4 and G5 are shorted the message will be an echo */
     if (rxBytes > 0) {
             data1[rxBytes] = 0;
             ESP_LOGI(TAG, "Read %d bytes: '%s'", rxBytes, data1);
             ESP_LOG_BUFFER_HEXDUMP(TAG, data1, rxBytes, ESP_LOG_INFO);
+            const char* resp_str1 = (char*) data1;
+            httpd_resp_send(req, resp_str1, strlen(resp_str1));
+            l=61;
+        }else if(l==59){
+
+          const char* resp_str2 = (char*) "0,0,0,0";
+          httpd_resp_send(req, resp_str2, strlen(resp_str2));
         }
+      vTaskDelay(1000 / portTICK_PERIOD_MS);
+    l++;
+  }
     return ESP_OK;
 
 }
